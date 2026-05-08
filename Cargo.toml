@@ -1,0 +1,18 @@
+[package]
+name = "zeloxy"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "A library for working with various proxies."
+repository = "https://github.com/nullclyze/zeloxy"
+documentation = "https://docs.rs/zeloxy"
+readme = "README.md"
+keywords = ["proxy", "http", "socks", "async"]
+categories = ["network-programming", "asynchronous"]
+
+[dependencies]
+base64 = "0.22.1"
+bytes = "1.11.1"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.52.2", features = ["full"] }
