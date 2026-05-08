@@ -45,6 +45,8 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 ///   Ok(())
 /// }
 /// ```
+///
+/// Больше актуальных примеров: [смотреть](https://github.com/nullclyze/zeloxy/tree/main/examples)
 #[derive(Debug)]
 pub struct Proxy {
   proxy_type: ProxyType,
@@ -157,6 +159,12 @@ impl Proxy {
       timeout: 20000,
       auth: Some(auth),
     }
+  }
+
+  /// Метод установки авторизации прокси
+  pub fn with_auth(mut self, auth: ProxyAuth) -> Self {
+    self.auth = Some(auth);
+    self
   }
 
   /// Метод установки адреса целевого сервера
