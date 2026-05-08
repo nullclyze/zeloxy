@@ -1,3 +1,6 @@
+use std::time::Instant;
+
+use hashbrown::HashMap;
 use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -18,26 +21,46 @@ pub struct IpInfo {
   pub readme: String,
 }
 
+/// Структура результата проверки
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckResult {
+  pub pinged_services: HashMap<String, u128>,
+  pub average_ping: Option<u128>,
+}
+
 /// Трейт прокси чекера
 pub trait ProxyChecker {
-  /// Метод проверки работоспособности прокси, используя `ipinfo.io`.
+  /// Метод проверки качества прокси, основываясь на результатах подключения
+  /// к различным популярным сервисам вроде Cloudflare, ChatGPT и так далее.
+  /// Важно понимать, что данная проверка может занимать определённое время,
+  /// обычно требуется ~7 секунд чтобы проверить доступность всех сервисов.
   ///
   /// ## Примеры
   ///
   /// ```rust, ignore
   /// use zeloxy::{Proxy, ProxyChecker};
   ///
-  /// // Создаём прокси
-  /// let proxy = Proxy::new("PROXY_IP:PROXY_PORT");
+  /// #[tokio::main]
+  /// async fn main() {
+  ///   // Создаём прокси
+  ///   let proxy = Proxy::new("PROXY_IP:PROXY_PORT");
   ///
-  /// // Проверяем доступность прокси
-  /// if proxy.check_proxy().await {
-  ///   println!("Прокси доступен");
-  /// } else {
-  ///   println!("Прокси недоступен");
+  ///   // Проверяем доступность прокси
+  ///   let check_result = proxy.check_proxy().await;
+  ///
+  ///   // Логгируем результат проверки
+  ///   for (name, ping) in result.pinged_services {
+  ///     println!("Пинг {}: {}ms", name, ping);
+  ///   }
+  ///
+  ///   println!("===============================");
+  ///
+  ///   if let Some(average_ping) = result.average_ping {
+  ///     println!("Средний пинг прокси: {}ms", average_ping);
+  ///   }
   /// }
   /// ```
-  fn check_proxy(&self) -> impl std::future::Future<Output = bool> + Send;
+  fn check_proxy(&self) -> impl std::future::Future<Output = CheckResult> + Send;
 
   /// Метод получения информации об IP с `ipinfo.io`.
   ///
@@ -46,39 +69,60 @@ pub trait ProxyChecker {
   /// ```rust, ignore
   /// use zeloxy::{Proxy, ProxyChecker};
   ///
-  /// // Создаём прокси и получаем информацию об IP
-  /// let proxy = Proxy::new("PROXY_IP:PROXY_PORT");
-  /// let ip_info = proxy.get_ip_info().await;
+  /// #[tokio::main]
+  /// async fn main() {
+  ///   // Создаём прокси и получаем информацию об IP
+  ///   let proxy = Proxy::new("PROXY_IP:PROXY_PORT");
+  ///   let ip_info = proxy.get_ip_info().await;
   ///
-  /// println!("Имя хоста: {}", ip_info.hostname);
-  /// println!("Страна: {}", ip_info.country);
-  /// println!("Город: {}", ip_info.city);
-  /// println!("Локация: {}", ip_info.loc);
+  ///   println!("Имя хоста: {}", ip_info.hostname);
+  ///   println!("Страна: {}", ip_info.country);
+  ///   println!("Город: {}", ip_info.city);
+  ///   println!("Локация: {}", ip_info.loc);
+  /// }
   /// ```
-  fn get_ip_info(&self) -> impl std::future::Future<Output = Option<IpInfo>> + Send;
+  fn lookup(&self) -> impl std::future::Future<Output = Option<IpInfo>> + Send;
 }
 
 impl ProxyChecker for Proxy {
-  async fn check_proxy(&self) -> bool {
-    if !self.is_available().await {
-      return false;
-    }
-
-    let ip_info = match self.get_ip_info().await {
-      Some(info) => info,
-      None => return false,
+  async fn check_proxy(&self) -> CheckResult {
+    let mut check_result = CheckResult {
+      pinged_services: HashMap::new(),
+      average_ping: None,
     };
 
-    if let Some(ip) = self.get_ip() {
-      if ip != ip_info.ip {
-        return false;
+    if !self.is_available().await {
+      return check_result;
+    }
+
+    let services = vec![
+      ("cloudflare.com", 80),
+      ("chatgpt.com", 80),
+      ("facebook.com", 80),
+      ("yandex.ru", 80),
+      ("youtube.com", 80),
+      ("github.com", 80),
+      ("reddit.com", 80),
+    ];
+
+    let mut total_pinged_services = 0;
+    let mut total_ping = 0;
+
+    for (service_host, service_port) in services {
+      if let Some(ping) = ping_service(&self, service_host, service_port).await {
+        total_pinged_services += 1;
+        total_ping += ping;
+
+        check_result.pinged_services.insert(service_host.to_string(), ping);
       }
     }
 
-    true
+    check_result.average_ping = Some(total_ping / total_pinged_services);
+
+    check_result
   }
 
-  async fn get_ip_info(&self) -> Option<IpInfo> {
+  async fn lookup(&self) -> Option<IpInfo> {
     self.rebind("ipinfo.io".to_string(), 80);
 
     let mut stream = match self.connect().await {
@@ -117,6 +161,20 @@ impl ProxyChecker for Proxy {
   }
 }
 
+/// Вспомогательная функция пингования сервиса
+async fn ping_service(proxy: &Proxy, service_host: &str, service_port: u16) -> Option<u128> {
+  proxy.rebind(service_host, service_port);
+
+  let start_time = Instant::now();
+
+  match proxy.connect().await {
+    Ok(_) => {}
+    Err(_) => return None,
+  }
+
+  Some(start_time.elapsed().as_millis())
+}
+
 #[cfg(test)]
 mod tests {
   use crate::{Proxy, ProxyChecker, ProxyType};
@@ -125,16 +183,22 @@ mod tests {
   async fn test_proxy_check() {
     let proxy = Proxy::new("98.175.31.222:4145", ProxyType::Socks5);
 
-    if proxy.check_proxy().await {
-      println!("Доступен");
-    } else {
-      println!("Недоступен");
+    let result = proxy.check_proxy().await;
+
+    for (name, ping) in result.pinged_services {
+      println!("Пинг {}: {}ms", name, ping);
+    }
+
+    println!("===============================");
+
+    if let Some(average_ping) = result.average_ping {
+      println!("Средний пинг прокси: {}ms", average_ping);
     }
   }
 
   #[tokio::test]
-  async fn test_get_ip_info() {
+  async fn test_lookup() {
     let proxy = Proxy::new("98.175.31.222:4145", ProxyType::Socks5);
-    println!("Информация об IP: {:?}", proxy.get_ip_info().await);
+    println!("Информация об IP: {:?}", proxy.lookup().await);
   }
 }
