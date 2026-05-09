@@ -3,7 +3,7 @@ use zeloxy::{Proxy, ProxyResult, ProxyType};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-  // Создаём HTTP-прокси и задаём адрес целевого сервера
+  // Создаём HTTP-прокси
   let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
 
   match proxy.connect("ipinfo.io", 80).await {
