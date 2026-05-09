@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 
 use crate::stream::reader::ProxyReader;
 use crate::stream::writer::ProxyWriter;
-use crate::{ErrorKind, Proxy, ProxyError, ProxyResult};
+use crate::{ErrorKind, GetRequestOpts, Proxy, ProxyError, ProxyResult};
 
 /// TCP-соединение с прокси
 pub struct ProxyStream {
@@ -65,9 +65,9 @@ impl ProxyStream {
   }
 
   /// Вспомогательный метод отправки команды GET-запроса
-  pub async fn get_request(&self, host: impl Into<String>) -> ProxyResult<String> {
+  pub async fn get_request(&self, host: impl Into<String>, options: GetRequestOpts) -> ProxyResult<String> {
     if let Some(writer) = self.writer.lock().await.as_mut() {
-      let req = format!("GET / HTTP/1.0\r\nHost: {}\r\n\r\n", host.into());
+      let req = format!("GET / HTTP/1.0\r\nHost: {}\r\n\r\n{}", host.into(), options.to_request());
       writer.write(req.as_bytes()).await?;
     } else {
       return Err(ProxyError::new(ErrorKind::StreamError, "writer is not initialized"));
@@ -86,7 +86,7 @@ impl ProxyStream {
 
 #[cfg(test)]
 mod tests {
-  use crate::{Proxy, ProxyResult, ProxyStream};
+  use crate::{GetRequestOpts, Proxy, ProxyResult, ProxyStream};
 
   #[tokio::test]
   async fn test_proxy_stream() -> ProxyResult<()> {
@@ -95,7 +95,16 @@ mod tests {
 
     stream.connect("ipinfo.io", 80).await?;
 
-    let resp = stream.get_request("ipinfo.io").await?;
+    let options = GetRequestOpts {
+      user_agent: Some(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36".to_string(),
+      ),
+      ..Default::default()
+    };
+
+    println!("{}", options.to_request());
+
+    let resp = stream.get_request("ipinfo.io", options).await?;
 
     println!("Ответ: {}", resp);
 
