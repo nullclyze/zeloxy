@@ -123,9 +123,7 @@ impl ProxyChecker for Proxy {
   }
 
   async fn lookup(&self) -> Option<IpInfo> {
-    self.rebind("ipinfo.io".to_string(), 80);
-
-    let mut stream = match self.connect().await {
+    let mut stream = match self.connect("ipinfo.io", 80).await {
       ProxyResult::Ok(s) => s,
       ProxyResult::Err(_) => return None,
     };
@@ -163,11 +161,9 @@ impl ProxyChecker for Proxy {
 
 /// Вспомогательная функция пингования сервиса
 async fn ping_service(proxy: &Proxy, service_host: &str, service_port: u16) -> Option<u128> {
-  proxy.rebind(service_host, service_port);
-
   let start_time = Instant::now();
 
-  match proxy.connect().await {
+  match proxy.connect(service_host, service_port).await {
     Ok(_) => {}
     Err(_) => return None,
   }

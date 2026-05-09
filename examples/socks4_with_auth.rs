@@ -9,10 +9,10 @@ async fn main() {
 
   // Создаём SOCKS4-прокси и задаём ему адрес целевого сервера.
   // В реальном коде должны быть валидные данные
-  let proxy = Proxy::from("socks4://PROXY_IP:PROXY_PORT").with_auth(auth).bind("TARGET_HOST", 80);
+  let proxy = Proxy::from("socks4://PROXY_IP:PROXY_PORT").with_auth(auth);
 
   // Подключаемся к прокси и логгируем результат
-  match proxy.connect().await {
+  match proxy.connect("TARGET_HOST", 80).await {
     ProxyResult::Ok(_) => {
       println!("Подключение с прокси установлено");
     }
