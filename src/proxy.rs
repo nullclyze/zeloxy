@@ -23,10 +23,9 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 /// #[tokio::main]
 /// async fn main() -> std::io::Result<()> {
 ///   // Создаём HTTP-прокси и задаём адрес целевого сервера
-///   let proxy = Proxy::new("PROXY_IP:PROXY_PORT", ProxyType::Http)
-///     .bind("example.com".to_string(), 80);
+///   let proxy = Proxy::new("PROXY_IP:PROXY_PORT", ProxyType::Http);
 ///
-///   match proxy.connect().await {
+///   match proxy.connect("example.com", 80).await {
 ///     ProxyResult::Ok(mut conn) => {
 ///       // Отправляем GET-запрос
 ///       conn.write_all(b"GET / HTTP/1.0\r\nHost: example.com\r\n\r\n").await?;
