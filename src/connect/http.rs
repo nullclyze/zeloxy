@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use tokio::io::AsyncReadExt;
@@ -26,7 +28,12 @@ pub async fn connect_http(stream: &mut TcpStream, target_host: String, target_po
   write_all_to(stream, req.into()).await?;
 
   let mut resp = vec![0; 8192];
-  let n = stream.read(&mut resp).await?;
+
+  let n = match tokio::time::timeout(Duration::from_secs(14), stream.read(&mut resp)).await {
+    Ok(n) => n?,
+    Err(_) => return Err(ProxyError::new(ErrorKind::Timeout, "failed to read buffer from stream")),
+  };
+
   resp.truncate(n);
 
   let resp_str = String::from_utf8_lossy(&resp);
