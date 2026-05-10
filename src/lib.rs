@@ -1,5 +1,6 @@
+pub mod tools;
+
 mod auth;
-mod checker;
 mod connect;
 mod error;
 mod proxy;
@@ -8,7 +9,6 @@ mod rw;
 mod stream;
 
 pub use auth::*;
-pub use checker::*;
 pub use error::*;
 pub use proxy::*;
 pub use result::*;

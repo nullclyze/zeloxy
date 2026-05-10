@@ -1,4 +1,7 @@
-use zeloxy::{Proxy, ProxyChecker};
+use std::sync::Arc;
+
+use zeloxy::Proxy;
+use zeloxy::tools::ping_proxy_parallel;
 
 #[tokio::main]
 async fn main() {
@@ -17,14 +20,17 @@ async fn main() {
 
   let mut handles = Vec::new();
 
-  for proxy in proxies {
+  for proxy_str in proxies {
     // Спавним отдельную задачу для более быстрой проверки
     let handle = tokio::spawn(async move {
+      // Создаём прокси
+      let proxy = Proxy::from(proxy_str);
+
       // Проверяем прокси
-      let result = Proxy::from(proxy).check_proxy().await;
+      let result = ping_proxy_parallel(Arc::new(proxy), None).await;
 
       if result.pinged_services.len() > 0 {
-        println!("\n============= {} =============", proxy);
+        println!("\n============= {} =============", proxy_str);
 
         // Логгируем результаты
         for (name, ping) in result.pinged_services {
@@ -39,7 +45,7 @@ async fn main() {
 
         println!("========================================================");
       } else {
-        println!("\n[!] Прокси {} недоступен", proxy);
+        println!("\n[!] Прокси {} недоступен", proxy_str);
       }
     });
 
