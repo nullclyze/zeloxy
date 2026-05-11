@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
+use zeloxy::ProxyChain;
 use zeloxy::tools::ping_proxy_chain_parallel;
-use zeloxy::{Proxy, ProxyChain};
 
 #[tokio::main]
 async fn main() {
   // Создаём список прокси
   let proxies = vec![
-    Proxy::from("socks4://98.181.137.83:4145"),
-    Proxy::from("socks4://98.170.57.249:4145"),
-    Proxy::from("socks5://212.58.132.5:1080"),
+    "socks4://98.181.137.83:4145",
+    "socks4://98.170.57.249:4145",
+    "socks5://212.58.132.5:1080",
   ];
 
   // Создаём цепочку прокси
-  let chain = ProxyChain::new().with_proxies(proxies);
+  let chain = ProxyChain::from(proxies);
 
   // Пингуем цепочку прокси параллельно
   let result = ping_proxy_chain_parallel(Arc::new(chain), None).await;
