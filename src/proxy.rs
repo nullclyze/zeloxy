@@ -138,13 +138,13 @@ impl Proxy {
   }
 
   /// Метод установки таймаута подключения к прокси
-  pub fn set_timeout(mut self, timeout: u64) -> Self {
+  pub fn with_timeout(mut self, timeout: u64) -> Self {
     self.timeout = timeout;
     self
   }
 
   /// Метод установки типа прокси
-  pub fn set_proxy_type(mut self, proxy_type: ProxyType) -> Self {
+  pub fn with_proxy_type(mut self, proxy_type: ProxyType) -> Self {
     self.proxy_type = proxy_type;
     self
   }
@@ -169,6 +169,22 @@ impl Proxy {
     }
   }
 
+  /// Метод получения IP прокси
+  pub fn get_port(&self) -> Option<u16> {
+    if let Some(port_str) = self.proxy_address.split(":").collect::<Vec<&str>>().get(1) {
+      if let Ok(port) = (*port_str).parse::<u16>() {
+        return Some(port);
+      }
+    }
+
+    None
+  }
+
+  /// Метод получения адреса прокси в формате `IP:PORT`
+  pub fn get_address(&self) -> &str {
+    &self.proxy_address
+  }
+
   /// Метод подключения к прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
     let mut stream = match timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
@@ -184,6 +200,22 @@ impl Proxy {
       }
     };
 
+    match self.proxy_type {
+      ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyType::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
+    }
+
+    Ok(stream)
+  }
+
+  /// Метод подключения к прокси с ранее созданным TCP-соединением
+  pub async fn connect_with_stream(
+    &self,
+    mut stream: TcpStream,
+    target_host: impl Into<String>,
+    target_port: u16,
+  ) -> ProxyResult<TcpStream> {
     match self.proxy_type {
       ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
       ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
