@@ -23,7 +23,7 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 /// #[tokio::main]
 /// async fn main() -> std::io::Result<()> {
 ///   // Создаём HTTP-прокси и задаём адрес целевого сервера
-///   let proxy = Proxy::new("PROXY_IP:PROXY_PORT", ProxyType::Http);
+///   let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
 ///
 ///   match proxy.connect("example.com", 80).await {
 ///     ProxyResult::Ok(mut conn) => {
@@ -45,7 +45,7 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 /// ```
 ///
 /// Больше актуальных примеров: [смотреть](https://github.com/nullclyze/zeloxy/tree/main/examples)
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Proxy {
   proxy_type: ProxyType,
   proxy_address: String,
@@ -59,55 +59,6 @@ pub enum ProxyType {
   Http,
   Socks5,
   Socks4,
-}
-
-impl From<String> for Proxy {
-  fn from(value: String) -> Self {
-    let split = value.split("://").collect::<Vec<&str>>();
-    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
-
-    Self {
-      proxy_address: (*proxy).to_string(),
-      proxy_type: match *protocol {
-        "http" => ProxyType::Http,
-        "socks5" => ProxyType::Socks5,
-        "socks4" => ProxyType::Socks4,
-        _ => ProxyType::Socks5,
-      },
-      timeout: 20000,
-      auth: None,
-    }
-  }
-}
-
-impl From<&str> for Proxy {
-  fn from(value: &str) -> Self {
-    let split = value.split("://").collect::<Vec<&str>>();
-    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
-
-    Self {
-      proxy_address: (*proxy).to_string(),
-      proxy_type: match *protocol {
-        "http" => ProxyType::Http,
-        "socks5" => ProxyType::Socks5,
-        "socks4" => ProxyType::Socks4,
-        _ => ProxyType::Socks5,
-      },
-      timeout: 20000,
-      auth: None,
-    }
-  }
-}
-
-impl Clone for Proxy {
-  fn clone(&self) -> Self {
-    Self {
-      proxy_type: self.proxy_type.clone(),
-      proxy_address: self.proxy_address.clone(),
-      timeout: self.timeout,
-      auth: self.auth.clone(),
-    }
-  }
 }
 
 impl Proxy {
@@ -185,6 +136,17 @@ impl Proxy {
     &self.proxy_address
   }
 
+  /// Метод получения полного адреса прокси в формате `PROTOCOL://IP:PORT`
+  pub fn get_full_address(&self) -> String {
+    let protocol = match self.proxy_type {
+      ProxyType::Http => "http",
+      ProxyType::Socks4 => "socks4",
+      ProxyType::Socks5 => "socks5",
+    };
+
+    format!("{}://{}", protocol, self.proxy_address)
+  }
+
   /// Метод подключения к прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
     let mut stream = match timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
@@ -223,6 +185,44 @@ impl Proxy {
     }
 
     Ok(stream)
+  }
+}
+
+impl From<String> for Proxy {
+  fn from(value: String) -> Self {
+    let split = value.split("://").collect::<Vec<&str>>();
+    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
+
+    Self {
+      proxy_address: (*proxy).to_string(),
+      proxy_type: match *protocol {
+        "http" => ProxyType::Http,
+        "socks5" => ProxyType::Socks5,
+        "socks4" => ProxyType::Socks4,
+        _ => ProxyType::Socks5,
+      },
+      timeout: 20000,
+      auth: None,
+    }
+  }
+}
+
+impl From<&str> for Proxy {
+  fn from(value: &str) -> Self {
+    let split = value.split("://").collect::<Vec<&str>>();
+    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
+
+    Self {
+      proxy_address: (*proxy).to_string(),
+      proxy_type: match *protocol {
+        "http" => ProxyType::Http,
+        "socks5" => ProxyType::Socks5,
+        "socks4" => ProxyType::Socks4,
+        _ => ProxyType::Socks5,
+      },
+      timeout: 20000,
+      auth: None,
+    }
   }
 }
 

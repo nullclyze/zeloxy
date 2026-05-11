@@ -1,4 +1,5 @@
 use tokio::io::AsyncReadExt;
+use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use crate::stream::reader::ProxyReader;
@@ -7,7 +8,7 @@ use crate::{ErrorKind, GetRequestOpts, Proxy, ProxyError, ProxyResult};
 
 /// TCP-соединение с прокси
 pub struct ProxyStream {
-  proxy: Proxy,
+  proxy: Option<Proxy>,
   reader: Mutex<Option<ProxyReader>>,
   writer: Mutex<Option<ProxyWriter>>,
 }
@@ -15,23 +16,43 @@ pub struct ProxyStream {
 impl ProxyStream {
   /// Метод создания `ProxyStream` (данный метод не подключается к целевому
   /// серверу через прокси, для этого используется метод `ProxyStream::connect`)
-  pub fn new(proxy: Proxy) -> Self {
+  pub fn new(proxy: impl Into<Proxy>) -> Self {
     Self {
-      proxy,
+      proxy: Some(proxy.into()),
       reader: Mutex::new(None),
       writer: Mutex::new(None),
     }
   }
 
+  /// Метод создания `ProxyStream` с ранее созданным `TcpStream`
+  pub fn new_with_stream(stream: impl Into<TcpStream>) -> Self {
+    let (rh, wh) = stream.into().into_split();
+
+    Self {
+      proxy: None,
+      reader: Mutex::new(Some(ProxyReader { read_stream: rh })),
+      writer: Mutex::new(Some(ProxyWriter { write_stream: wh })),
+    }
+  }
+
+  /// Метод установки прокси
+  pub fn set_proxy(&mut self, proxy: impl Into<Proxy>) {
+    self.proxy = Some(proxy.into());
+  }
+
   /// Метод подключения к целевому серверу через прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<()> {
-    let stream = self.proxy.connect(target_host, target_port).await?;
-    let (rh, wh) = stream.into_split();
+    if let Some(proxy) = &self.proxy {
+      let stream = proxy.connect(target_host, target_port).await?;
+      let (rh, wh) = stream.into_split();
 
-    *self.reader.lock().await = Some(ProxyReader { read_stream: rh });
-    *self.writer.lock().await = Some(ProxyWriter { write_stream: wh });
+      *self.reader.lock().await = Some(ProxyReader { read_stream: rh });
+      *self.writer.lock().await = Some(ProxyWriter { write_stream: wh });
 
-    Ok(())
+      Ok(())
+    } else {
+      Err(ProxyError::new(ErrorKind::InvalidData, "proxy not set"))
+    }
   }
 
   /// Метод выключения текущего TCP-соединения
@@ -81,6 +102,12 @@ impl ProxyStream {
     } else {
       Err(ProxyError::new(ErrorKind::StreamError, "reader is not initialized"))
     }
+  }
+}
+
+impl From<TcpStream> for ProxyStream {
+  fn from(value: TcpStream) -> Self {
+    Self::new_with_stream(value)
   }
 }
 

@@ -77,12 +77,12 @@ pub async fn ping_proxy(proxy: &Proxy, pinged_services: Option<Vec<(String, u16)
       Ok(mut s) => {
         let _ = s.shutdown().await;
 
-        let ping = start_time.elapsed().as_millis();
+        let ping = start_time.elapsed().as_millis() as u64;
 
         total_pinged_services += 1;
         total_ping += ping as u64;
 
-        ping_info.pinged_services.insert(service_host, ping as u64);
+        ping_info.pinged_services.insert(service_host, ping);
       }
       Err(_) => {}
     }
@@ -135,6 +135,7 @@ pub async fn ping_proxy_chain(chain: &ProxyChain, pinged_services: Option<Vec<(S
       } else {
         continue;
       };
+
       let proxy_port = if let Some(port) = proxy.get_port() {
         port
       } else {
@@ -223,12 +224,12 @@ pub async fn ping_proxy_parallel(proxy: Arc<Proxy>, pinged_services: Option<Vec<
         Ok(mut s) => {
           let _ = s.shutdown().await;
 
-          let ping = start_time.elapsed().as_millis();
+          let ping = start_time.elapsed().as_millis() as u64;
 
           total_pinged_services_clone.fetch_add(1, Ordering::SeqCst);
-          total_ping_clone.fetch_add(ping as u64, Ordering::SeqCst);
+          total_ping_clone.fetch_add(ping, Ordering::SeqCst);
 
-          ping_info_mutex_clone.lock().await.pinged_services.insert(service_host, ping as u64);
+          ping_info_mutex_clone.lock().await.pinged_services.insert(service_host, ping);
         }
         Err(_) => {}
       }
@@ -296,6 +297,7 @@ pub async fn ping_proxy_chain_parallel(chain: Arc<ProxyChain>, pinged_services: 
         } else {
           return;
         };
+
         let proxy_port = if let Some(port) = proxy.get_port() {
           port
         } else {

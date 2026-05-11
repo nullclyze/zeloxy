@@ -14,13 +14,13 @@ use crate::{ErrorKind, Proxy, ProxyError, ProxyResult};
 /// async fn main() -> ProxyResult<()> {
 ///   // Создаём список из 3 прокси
 ///   let proxies = vec![
-///     Proxy::from("socks4://98.181.137.83:4145"),
-///     Proxy::from("socks4://98.170.57.249:4145"),
-///     Proxy::from("socks5://212.58.132.5:1080"),
+///     "socks4://98.181.137.83:4145",
+///     "socks4://98.170.57.249:4145",
+///     "socks5://212.58.132.5:1080",
 ///   ];
 ///
 ///   // Создаём цепочку прокси
-///   let chain = ProxyChain::new().with_proxies(proxies);
+///   let chain = ProxyChain::from(proxies);
 ///
 ///   // Подключаемся к целевому серверу через цепочку
 ///   let mut stream = chain.connect("ipinfo.io", 80).await?;
@@ -40,6 +40,7 @@ use crate::{ErrorKind, Proxy, ProxyError, ProxyResult};
 /// ```
 ///
 /// Больше актуальных примеров: [смотреть](https://github.com/nullclyze/zeloxy/tree/main/examples)
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProxyChain {
   chain: Vec<Proxy>,
 }
@@ -51,8 +52,8 @@ impl ProxyChain {
   }
 
   /// Метод добавления прокси в цепочку
-  pub fn add_proxy(&mut self, proxy: Proxy) {
-    self.chain.push(proxy);
+  pub fn add_proxy(&mut self, proxy: impl Into<Proxy>) {
+    self.chain.push(proxy.into());
   }
 
   /// Метод добавления нескольких прокси в цепочку
@@ -61,8 +62,8 @@ impl ProxyChain {
   }
 
   /// Метод добавления прокси в цепочку (возвращает `Self`)
-  pub fn with_proxy(mut self, proxy: Proxy) -> Self {
-    self.chain.push(proxy);
+  pub fn with_proxy(mut self, proxy: impl Into<Proxy>) -> Self {
+    self.chain.push(proxy.into());
     self
   }
 
@@ -109,6 +110,50 @@ impl ProxyChain {
   }
 }
 
+impl From<Vec<String>> for ProxyChain {
+  fn from(value: Vec<String>) -> Self {
+    let mut chain = Vec::new();
+
+    for address in value {
+      chain.push(Proxy::from(address));
+    }
+
+    Self { chain }
+  }
+}
+
+impl From<Vec<&str>> for ProxyChain {
+  fn from(value: Vec<&str>) -> Self {
+    let mut chain = Vec::new();
+
+    for address in value {
+      chain.push(Proxy::from(address));
+    }
+
+    Self { chain }
+  }
+}
+
+impl From<&str> for ProxyChain {
+  fn from(value: &str) -> Self {
+    let pretty_value = value.replace(" ", "").replace("\n", "");
+
+    let chain: Vec<&str> = pretty_value.split(",").collect();
+
+    Self::from(chain)
+  }
+}
+
+impl From<String> for ProxyChain {
+  fn from(value: String) -> Self {
+    let pretty_value = value.replace(" ", "").replace("\n", "");
+
+    let chain: Vec<&str> = pretty_value.split(",").collect();
+
+    Self::from(chain)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -121,7 +166,6 @@ mod tests {
       Proxy::from("socks4://98.181.137.83:4145"),
       Proxy::from("socks4://98.170.57.249:4145"),
       Proxy::from("socks5://212.58.132.5:1080"),
-      // Proxy::from("socks4://68.71.242.118:4145"),
     ];
 
     let chain = ProxyChain::new().with_proxies(proxies);
@@ -136,5 +180,16 @@ mod tests {
     println!("{}", String::from_utf8_lossy(&resp));
 
     Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_chain_from() {
+    let proxies = vec![
+      "socks4://98.181.137.83:4145",
+      "socks4://98.170.57.249:4145",
+      "socks5://212.58.132.5:1080",
+    ];
+
+    println!("Цепочка: {:?}", ProxyChain::from(proxies));
   }
 }
