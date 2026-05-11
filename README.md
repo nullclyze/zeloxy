@@ -1,4 +1,4 @@
-# `zeloxy`
+# Zeloxy
 
 A Rust library for working with various proxies.
 
@@ -90,15 +90,15 @@ use zeloxy::{Proxy, ProxyChain, ProxyResult};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
-  // Создаём список из 3 прокси
+  // Создаём список прокси
   let proxies = vec![
-    Proxy::from("socks4://98.181.137.83:4145"),
-    Proxy::from("socks4://98.170.57.249:4145"),
-    Proxy::from("socks5://212.58.132.5:1080"),
+    "socks4://98.181.137.83:4145",
+    "socks4://98.170.57.249:4145",
+    "socks5://212.58.132.5:1080",
   ];
 
   // Создаём цепочку прокси
-  let chain = ProxyChain::new().with_proxies(proxies);
+  let chain = ProxyChain::from(proxies);
 
   // Подключаемся к целевому серверу через цепочку
   let mut stream = chain.connect("ipinfo.io", 80).await?;
