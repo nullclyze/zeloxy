@@ -77,6 +77,11 @@ impl ProxyChain {
     self.chain.clear();
   }
 
+  /// Метод получения цепочки прокси
+  pub fn get_chain(&self) -> &Vec<Proxy> {
+    &self.chain
+  }
+
   /// Метод подключения к целевому серверу через цепочку прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
     let first_proxy = &self.chain[0];
