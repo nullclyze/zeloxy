@@ -1,5 +1,7 @@
 # Zeloxy
 
+[Russian Documentation](https://github.com/nullclyze/zeloxy/blob/main/docs/RU.md) | [English Documentation](https://github.com/nullclyze/zeloxy/blob/main/docs/EN.md) | [Examples](https://github.com/nullclyze/zeloxy/blob/main/examples) | [License](https://github.com/nullclyze/zeloxy/blob/main/LICENSE)
+
 A Rust library for working with various proxies.
 
 Supported proxy types:
