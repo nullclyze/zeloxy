@@ -1,64 +1,61 @@
-#[cfg(test)]
-mod tests {
-  use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind};
 
-  use tokio::io::{AsyncReadExt, AsyncWriteExt};
-  use zeloxy::{Proxy, ProxyResult, ProxyType};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use zeloxy::{Proxy, ProxyResult, ProxyType};
 
-  #[tokio::test]
-  async fn test_http_proxy() -> std::io::Result<()> {
-    let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+#[tokio::test]
+async fn test_http_proxy() -> std::io::Result<()> {
+  let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
 
-    let mut conn = match proxy.connect("ipinfo.io", 80).await {
-      ProxyResult::Ok(s) => s,
-      ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
-    };
+  let mut conn = match proxy.connect("ipinfo.io", 80).await {
+    ProxyResult::Ok(s) => s,
+    ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
+  };
 
-    conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
+  conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
 
-    let mut buf = Vec::new();
-    conn.read_to_end(&mut buf).await?;
+  let mut buf = Vec::new();
+  conn.read_to_end(&mut buf).await?;
 
-    println!("{}", String::from_utf8_lossy(&buf));
+  println!("{}", String::from_utf8_lossy(&buf));
 
-    Ok(())
-  }
+  Ok(())
+}
 
-  #[tokio::test]
-  async fn test_socks5_proxy() -> std::io::Result<()> {
-    let proxy = Proxy::new("212.58.132.5:1080", ProxyType::Socks5);
+#[tokio::test]
+async fn test_socks5_proxy() -> std::io::Result<()> {
+  let proxy = Proxy::new("212.58.132.5:1080", ProxyType::Socks5);
 
-    let mut conn = match proxy.connect("ipinfo.io", 80).await {
-      ProxyResult::Ok(s) => s,
-      ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
-    };
+  let mut conn = match proxy.connect("ipinfo.io", 80).await {
+    ProxyResult::Ok(s) => s,
+    ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
+  };
 
-    conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
+  conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
 
-    let mut buf = Vec::new();
-    conn.read_to_end(&mut buf).await?;
+  let mut buf = Vec::new();
+  conn.read_to_end(&mut buf).await?;
 
-    println!("{}", String::from_utf8_lossy(&buf));
+  println!("{}", String::from_utf8_lossy(&buf));
 
-    Ok(())
-  }
+  Ok(())
+}
 
-  #[tokio::test]
-  async fn test_socks4_proxy() -> std::io::Result<()> {
-    let proxy = Proxy::new("68.71.242.118:4145", ProxyType::Socks4);
+#[tokio::test]
+async fn test_socks4_proxy() -> std::io::Result<()> {
+  let proxy = Proxy::new("68.71.242.118:4145", ProxyType::Socks4);
 
-    let mut conn = match proxy.connect("ipinfo.io", 80).await {
-      ProxyResult::Ok(s) => s,
-      ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
-    };
+  let mut conn = match proxy.connect("ipinfo.io", 80).await {
+    ProxyResult::Ok(s) => s,
+    ProxyResult::Err(e) => return Err(Error::new(ErrorKind::NotConnected, e.text())),
+  };
 
-    conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
+  conn.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
 
-    let mut buf = Vec::new();
-    conn.read_to_end(&mut buf).await?;
+  let mut buf = Vec::new();
+  conn.read_to_end(&mut buf).await?;
 
-    println!("{}", String::from_utf8_lossy(&buf));
+  println!("{}", String::from_utf8_lossy(&buf));
 
-    Ok(())
-  }
+  Ok(())
 }

@@ -10,10 +10,24 @@ readme = "README.md"
 keywords = ["proxy", "http", "socks", "async"]
 categories = ["network-programming", "asynchronous"]
 
+[features]
+http = []
+socks4 = []
+socks5 = []
+chain = []
+stream = []
+tools = []
+default = ["http", "socks4", "socks5"]
+all = ["http", "socks4", "socks5", "chain", "stream", "tools"]
+
 [dependencies]
 base64 = "0.22.1"
 bytes = "1.11.1"
 hashbrown = "0.17.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1.52.2", features = ["rt-multi-thread", "net", "io-util", "time", "sync", "rt", "macros"] }
+tokio = { version = "1.52.2", features = ["net", "io-util", "time", "sync", "rt"] }
+
+[dev-dependencies]
+zeloxy = { path = ".", features = ["all"] }
+tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread"] }

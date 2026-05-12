@@ -56,8 +56,11 @@ pub struct Proxy {
 /// Тип прокси
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProxyType {
+  #[cfg(feature = "http")]
   Http,
+  #[cfg(feature = "socks4")]
   Socks4,
+  #[cfg(feature = "socks5")]
   Socks5,
 }
 
@@ -139,8 +142,11 @@ impl Proxy {
   /// Метод получения полного адреса прокси в формате `PROTOCOL://IP:PORT`
   pub fn get_full_address(&self) -> String {
     let protocol = match self.proxy_type {
+      #[cfg(feature = "http")]
       ProxyType::Http => "http",
+      #[cfg(feature = "socks4")]
       ProxyType::Socks4 => "socks4",
+      #[cfg(feature = "socks5")]
       ProxyType::Socks5 => "socks5",
     };
 
@@ -163,8 +169,11 @@ impl Proxy {
     };
 
     match self.proxy_type {
+      #[cfg(feature = "http")]
       ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      #[cfg(feature = "socks5")]
       ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      #[cfg(feature = "socks4")]
       ProxyType::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
     }
 
@@ -179,8 +188,11 @@ impl Proxy {
     target_port: u16,
   ) -> ProxyResult<TcpStream> {
     match self.proxy_type {
+      #[cfg(feature = "http")]
       ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      #[cfg(feature = "socks5")]
       ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      #[cfg(feature = "socks4")]
       ProxyType::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
     }
 
@@ -196,10 +208,18 @@ impl From<String> for Proxy {
     Self {
       proxy_address: (*proxy).to_string(),
       proxy_type: match *protocol {
+        #[cfg(feature = "http")]
         "http" => ProxyType::Http,
+        #[cfg(feature = "socks5")]
         "socks5" => ProxyType::Socks5,
+        #[cfg(feature = "socks4")]
         "socks4" => ProxyType::Socks4,
+        #[cfg(feature = "socks5")]
         _ => ProxyType::Socks5,
+        #[cfg(all(not(feature = "socks5"), feature = "socks4"))]
+        _ => ProxyType::Socks4,
+        #[cfg(all(not(feature = "socks5"), not(feature = "socks4"), feature = "http"))]
+        _ => ProxyType::Http,
       },
       timeout: 20000,
       auth: None,
@@ -215,10 +235,18 @@ impl From<&str> for Proxy {
     Self {
       proxy_address: (*proxy).to_string(),
       proxy_type: match *protocol {
+        #[cfg(feature = "http")]
         "http" => ProxyType::Http,
+        #[cfg(feature = "socks5")]
         "socks5" => ProxyType::Socks5,
+        #[cfg(feature = "socks4")]
         "socks4" => ProxyType::Socks4,
+        #[cfg(feature = "socks5")]
         _ => ProxyType::Socks5,
+        #[cfg(all(not(feature = "socks5"), feature = "socks4"))]
+        _ => ProxyType::Socks4,
+        #[cfg(all(not(feature = "socks5"), not(feature = "socks4"), feature = "http"))]
+        _ => ProxyType::Http,
       },
       timeout: 20000,
       auth: None,
