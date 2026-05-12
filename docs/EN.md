@@ -4,7 +4,7 @@ Before we begin, we need to connect the `zeloxy` library by adding following dep
 
 ```toml
 [dependencies]
-zeloxy = "0.2.1" # A different version may be needed
+zeloxy = { version = "0.2.2", features = ["all"] }
 ```
 
 Or type in terminal:
@@ -12,6 +12,22 @@ Or type in terminal:
 ```bash
 cargo add zeloxy
 ```
+
+# Library Features
+
+## Available Features
+
+- `http`: HTTP proxy support.
+- `socks4`: SOCKS4 proxy support.
+- `socks5`: SOCKS5 proxy support.
+- `chain`: proxy chain functionality.
+- `stream`: proxy stream creation functionality.
+- `tools`: helper tools such as `ping` and `lookup`.
+- `all`: includes all features.
+
+## Default Features
+
+The default feature set includes: `http`, `socks4`, `socks5`
 
 # First program
 
