@@ -57,8 +57,14 @@ impl ProxyChain {
   }
 
   /// Метод добавления нескольких прокси в цепочку
-  pub fn add_proxies(&mut self, proxies: Vec<Proxy>) {
-    self.chain.extend(proxies);
+  pub fn add_proxies(&mut self, proxies: Vec<impl Into<Proxy>>) {
+    let mut iter = Vec::new();
+
+    for proxy in proxies {
+      iter.push(proxy.into());
+    }
+
+    self.chain.extend(iter);
   }
 
   /// Метод добавления прокси в цепочку (возвращает `Self`)
@@ -68,8 +74,14 @@ impl ProxyChain {
   }
 
   /// Метод добавления нескольких прокси в цепочку (возвращает `Self`)
-  pub fn with_proxies(mut self, proxies: Vec<Proxy>) -> Self {
-    self.chain.extend(proxies);
+  pub fn with_proxies(mut self, proxies: Vec<impl Into<Proxy>>) -> Self {
+    let mut iter = Vec::new();
+
+    for proxy in proxies {
+      iter.push(proxy.into());
+    }
+
+    self.chain.extend(iter);
     self
   }
 
