@@ -95,7 +95,34 @@ impl ProxyChain {
     &self.chain
   }
 
-  /// Метод подключения к целевому серверу через цепочку прокси
+  /// Метод подключения к целевому серверу через цепочку прокси.
+  ///
+  /// ## Примеры
+  ///
+  /// ```rust, ignore
+  /// use zeloxy::ProxyChain;
+  ///
+  /// #[tokio::main]
+  /// async fn main() {
+  ///   // Создаём список прокси
+  ///   let proxies = vec![
+  ///     "socks4://98.181.137.83:4145",
+  ///     "socks4://98.170.57.249:4145",
+  ///     "socks5://212.58.132.5:1080",
+  ///   ];
+  ///
+  ///   // Создаём цепочку
+  ///   let chain = ProxyChain::from(proxies);
+  ///
+  ///   // Подключаемся к целевому серверу и логгируем результат
+  ///   match chain.connect("example.com", 80).await {
+  ///     Ok(_) => println!("Подключение установлено"),
+  ///     Err(_) => println!("Не удалось подключиться к серверу"),
+  ///   }
+  /// }
+  /// ```
+  ///
+  /// Больше актуальных примеров: [смотреть](https://github.com/nullclyze/zeloxy/tree/main/examples)
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
     let first_proxy = &self.chain[0];
     let first_addr = first_proxy.get_address();
@@ -149,7 +176,6 @@ impl From<Vec<&str>> for ProxyChain {
 impl From<&str> for ProxyChain {
   fn from(value: &str) -> Self {
     let pretty_value = value.replace(" ", "").replace("\n", "");
-
     let chain: Vec<&str> = pretty_value.split(",").collect();
 
     Self::from(chain)
@@ -159,7 +185,6 @@ impl From<&str> for ProxyChain {
 impl From<String> for ProxyChain {
   fn from(value: String) -> Self {
     let pretty_value = value.replace(" ", "").replace("\n", "");
-
     let chain: Vec<&str> = pretty_value.split(",").collect();
 
     Self::from(chain)
@@ -170,17 +195,17 @@ impl From<String> for ProxyChain {
 mod tests {
   use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-  use crate::{Proxy, ProxyChain, ProxyResult};
+  use crate::{ProxyChain, ProxyResult};
 
   #[tokio::test]
   async fn test_mini_chain() -> ProxyResult<()> {
     let proxies = vec![
-      Proxy::from("socks4://98.181.137.83:4145"),
-      Proxy::from("socks4://98.170.57.249:4145"),
-      Proxy::from("socks5://212.58.132.5:1080"),
+      "socks4://98.181.137.83:4145",
+      "socks4://98.170.57.249:4145",
+      "socks5://212.58.132.5:1080",
     ];
 
-    let chain = ProxyChain::new().with_proxies(proxies);
+    let chain = ProxyChain::from(proxies);
 
     let mut stream = chain.connect("ipinfo.io", 80).await?;
 

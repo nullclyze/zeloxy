@@ -51,6 +51,9 @@ fn default_pinged_services() -> Vec<(String, u16)> {
 }
 
 /// Функция пингования прокси
+/// Данная функция может требовать ~7 секунд на пингование прокси,
+/// используя сервисы по умолчанию, рекомендуется использовать
+/// `ping_proxy_parallel` для увеличения скорости пингования
 pub async fn ping_proxy(proxy: &Proxy, pinged_services: Option<Vec<(String, u16)>>) -> PingInfo {
   let mut ping_info = PingInfo {
     pinged_services: HashMap::new(),
@@ -94,9 +97,9 @@ pub async fn ping_proxy(proxy: &Proxy, pinged_services: Option<Vec<(String, u16)
 }
 
 /// Функция пингования цепочки прокси.
-/// Данная функция может требовать 11 и более секунд на
-/// пинговку цепочки из 3 прокси, поэтому рекомендуется использовать
-/// `ping_proxy_chain_parallel` для увеличения скорости пинговки
+/// Данная функция может требовать ~11 секунд на пингование цепочки
+/// из 3 прокси, используя сервисы по умолчанию, рекомендуется использовать
+/// `ping_proxy_chain_parallel` для увеличения скорости пингования
 pub async fn ping_proxy_chain(chain: &ProxyChain, pinged_services: Option<Vec<(String, u16)>>) -> ChainPingInfo {
   let mut ping_info = ChainPingInfo {
     from_to_ping_map: HashMap::new(),
@@ -400,12 +403,12 @@ mod tests {
   #[tokio::test]
   async fn test_ping_proxy_chain() {
     let proxies = vec![
-      Proxy::from("socks4://98.181.137.83:4145"),
-      Proxy::from("socks4://98.170.57.249:4145"),
-      Proxy::from("socks5://212.58.132.5:1080"),
+      "socks4://98.181.137.83:4145",
+      "socks4://98.170.57.249:4145",
+      "socks5://212.58.132.5:1080",
     ];
 
-    let chain = ProxyChain::new().with_proxies(proxies);
+    let chain = ProxyChain::from(proxies);
 
     let result = ping_proxy_chain(&chain, None).await;
 
@@ -437,12 +440,12 @@ mod tests {
   #[tokio::test]
   async fn test_ping_proxy_chain_parallel() {
     let proxies = vec![
-      Proxy::from("socks4://98.181.137.83:4145"),
-      Proxy::from("socks4://98.170.57.249:4145"),
-      Proxy::from("socks5://212.58.132.5:1080"),
+      "socks4://98.181.137.83:4145",
+      "socks4://98.170.57.249:4145",
+      "socks5://212.58.132.5:1080",
     ];
 
-    let chain = ProxyChain::new().with_proxies(proxies);
+    let chain = ProxyChain::from(proxies);
 
     let result = ping_proxy_chain_parallel(Arc::new(chain), None).await;
 
