@@ -1,10 +1,9 @@
-use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use crate::stream::reader::ProxyReader;
 use crate::stream::writer::ProxyWriter;
-use crate::{ErrorKind, GetRequestOpts, Proxy, ProxyError, ProxyResult};
+use crate::{ErrorKind, Proxy, ProxyError, ProxyResult};
 
 /// TCP-соединение с прокси
 pub struct ProxyStream {
@@ -76,31 +75,21 @@ impl ProxyStream {
     }
   }
 
+  /// Метод чтения данных из потока до конца
+  pub async fn read_to_end(&self, buffer: impl Into<&mut Vec<u8>>) -> ProxyResult<usize> {
+    if let Some(reader) = self.reader.lock().await.as_mut() {
+      Ok(reader.read_to_end(buffer).await?)
+    } else {
+      Err(ProxyError::new(ErrorKind::StreamError, "reader is not initialized"))
+    }
+  }
+
   /// Метод записи данных в поток
   pub async fn write(&self, buffer: impl Into<&[u8]>) -> ProxyResult<()> {
     if let Some(writer) = self.writer.lock().await.as_mut() {
       Ok(writer.write(buffer).await?)
     } else {
       Err(ProxyError::new(ErrorKind::StreamError, "writer is not initialized"))
-    }
-  }
-
-  /// Вспомогательный метод отправки команды GET-запроса
-  pub async fn get_request(&self, host: impl Into<String>, options: GetRequestOpts) -> ProxyResult<String> {
-    if let Some(writer) = self.writer.lock().await.as_mut() {
-      let req = format!("GET / HTTP/1.0\r\nHost: {}\r\n\r\n{}", host.into(), options.to_request());
-      writer.write(req.as_bytes()).await?;
-    } else {
-      return Err(ProxyError::new(ErrorKind::StreamError, "writer is not initialized"));
-    }
-
-    if let Some(reader) = self.reader.lock().await.as_mut() {
-      let mut resp = Vec::new();
-      reader.read_stream.read_to_end(&mut resp).await?;
-
-      Ok(String::from_utf8_lossy(&resp).to_string())
-    } else {
-      Err(ProxyError::new(ErrorKind::StreamError, "reader is not initialized"))
     }
   }
 }

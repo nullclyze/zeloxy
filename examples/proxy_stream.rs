@@ -1,4 +1,4 @@
-use zeloxy::{GetRequestOpts, Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
@@ -12,10 +12,14 @@ async fn main() -> ProxyResult<()> {
   stream.connect("example.com", 80).await?;
 
   // Отправляем GET-запрос на example.com
-  let resp = stream.get_request("example.com", GetRequestOpts::default()).await?;
+  let buf = "GET / HTTP/1.0\r\nHost: example.com\r\n\r\n".as_bytes();
+  stream.write(buf).await?;
 
-  // Логгируем ответ
-  println!("Ответ от example.com: {}", resp);
+  // Читаем ответ и логгируем его
+  let mut resp = Vec::new();
+  stream.read_to_end(&mut resp).await?;
+
+  println!("Ответ: {}", String::from_utf8_lossy(&resp));
 
   Ok(())
 }
