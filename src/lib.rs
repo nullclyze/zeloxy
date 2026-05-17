@@ -1,7 +1,6 @@
 mod auth;
 mod error;
 mod result;
-mod rw;
 mod validate;
 
 #[cfg(any(feature = "http", feature = "socks4", feature = "socks5"))]

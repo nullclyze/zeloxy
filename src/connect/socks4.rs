@@ -1,7 +1,7 @@
 use bytes::{BufMut, BytesMut};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::rw::{read_exact_from, write_all_to};
 use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 
 const PROXY_VERSION: u8 = 0x04;
@@ -61,11 +61,10 @@ pub async fn connect_socks4(stream: &mut TcpStream, target_host: String, target_
     req.put_u8(0x00);
   }
 
-  write_all_to(stream, req.into()).await?;
+  stream.write_all(&req).await?;
 
   let mut resp = [0u8; 8];
-
-  read_exact_from(stream, &mut resp).await?;
+  stream.read_exact(&mut resp).await?;
 
   // В SOCKS4 здесь обычно всегда 0x00
   if resp[0] != 0x00 {

@@ -2,10 +2,9 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::rw::write_all_to;
 use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 
 /// Метод создания подключения с HTTP прокси
@@ -25,7 +24,7 @@ pub async fn connect_http(stream: &mut TcpStream, target_host: String, target_po
 
   req.push_str("\r\n");
 
-  write_all_to(stream, req.into()).await?;
+  stream.write_all(req.as_bytes()).await?;
 
   let mut resp = vec![0; 8192];
 

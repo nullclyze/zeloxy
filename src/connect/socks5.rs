@@ -1,7 +1,7 @@
 use bytes::{BufMut, BytesMut};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::rw::{read_exact_from, write_all_to};
 use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 
 const PROXY_VERSION: u8 = 0x05;
@@ -66,11 +66,10 @@ pub async fn connect_socks5(stream: &mut TcpStream, target_host: String, target_
     vec![PROXY_VERSION, 0x01, 0x00]
   };
 
-  write_all_to(stream, greet).await?;
+  stream.write_all(&greet).await?;
 
   let mut response = [0u8; 2];
-
-  read_exact_from(stream, &mut response).await?;
+  stream.read_exact(&mut response).await?;
 
   if response[0] != PROXY_VERSION {
     return Err(ProxyError::new(ErrorKind::InvalidVersion, "invalid proxy version in response"));
@@ -94,11 +93,11 @@ pub async fn connect_socks5(stream: &mut TcpStream, target_host: String, target_
         buffer.put_u8(password.len() as u8);
         buffer.put_slice(password.as_bytes());
 
-        write_all_to(stream, buffer.into()).await?;
+        stream.write_all(&buffer).await?;
 
         let mut resp = [0u8; 2];
 
-        read_exact_from(stream, &mut resp).await?;
+        stream.read_exact(&mut resp).await?;
 
         if resp[0] != 0x01 {
           return Err(ProxyError::new(ErrorKind::AuthFailed, "invalid authorization version"));
@@ -145,11 +144,10 @@ pub async fn connect_socks5(stream: &mut TcpStream, target_host: String, target_
 
   req.put_u16(target_port);
 
-  write_all_to(stream, req.into()).await?;
+  stream.write_all(&req).await?;
 
   let mut resp = [0u8; 4];
-
-  read_exact_from(stream, &mut resp).await?;
+  stream.read_exact(&mut resp).await?;
 
   if resp[0] != PROXY_VERSION {
     return Err(ProxyError::new(ErrorKind::InvalidVersion, "invalid proxy version in response"));
@@ -169,17 +167,17 @@ pub async fn connect_socks5(stream: &mut TcpStream, target_host: String, target_
   match atyp {
     0x01 => {
       let mut addr = [0u8; 6];
-      read_exact_from(stream, &mut addr).await?;
+      stream.read_exact(&mut addr).await?;
     }
     0x04 => {
       let mut addr = [0u8; 18];
-      read_exact_from(stream, &mut addr).await?;
+      stream.read_exact(&mut addr).await?;
     }
     0x03 => {
       let mut len = [0u8; 1];
-      read_exact_from(stream, &mut len).await?;
+      stream.read_exact(&mut len).await?;
       let mut rest = vec![0u8; len[0] as usize + 2];
-      read_exact_from(stream, &mut rest).await?;
+      stream.read_exact(&mut rest).await?;
     }
     _ => {
       return Err(ProxyError::new(
