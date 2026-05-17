@@ -3,8 +3,8 @@ use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 
-use crate::connect::*;
 use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
+use crate::{connect::*, validate_proxy_str};
 
 /// Структура прокси.
 ///
@@ -58,36 +58,55 @@ pub struct Proxy {
 pub enum ProxyType {
   #[cfg(feature = "http")]
   Http,
+
   #[cfg(feature = "socks4")]
   Socks4,
+
   #[cfg(feature = "socks5")]
   Socks5,
 }
 
+impl From<&str> for ProxyType {
+  fn from(value: &str) -> Self {
+    match value {
+      "http" => Self::Http,
+      "socks4" => Self::Socks4,
+      "socks5" => Self::Socks5,
+      _ => Self::Socks5,
+    }
+  }
+}
+
+impl From<String> for ProxyType {
+  fn from(value: String) -> Self {
+    Self::from(value.as_str())
+  }
+}
+
 impl Proxy {
   /// Метод создания нового прокси
-  pub fn new(proxy_address: impl Into<String>, proxy_type: ProxyType) -> Self {
+  pub fn new(proxy_address: impl Into<String>, proxy_type: impl Into<ProxyType>) -> Self {
     Self {
       proxy_address: proxy_address.into(),
-      proxy_type: proxy_type,
+      proxy_type: proxy_type.into(),
       timeout: 20000,
       auth: None,
     }
   }
 
   /// Метод создания нового прокси с авторизацией
-  pub fn new_with_auth(proxy_address: impl Into<String>, proxy_type: ProxyType, auth: ProxyAuth) -> Self {
+  pub fn new_with_auth(proxy_address: impl Into<String>, proxy_type: impl Into<ProxyType>, auth: impl Into<ProxyAuth>) -> Self {
     Self {
       proxy_address: proxy_address.into(),
-      proxy_type: proxy_type,
+      proxy_type: proxy_type.into(),
       timeout: 20000,
-      auth: Some(auth),
+      auth: Some(auth.into()),
     }
   }
 
   /// Метод установки авторизации прокси
-  pub fn with_auth(mut self, auth: ProxyAuth) -> Self {
-    self.auth = Some(auth);
+  pub fn with_auth(mut self, auth: impl Into<ProxyAuth>) -> Self {
+    self.auth = Some(auth.into());
     self
   }
 
@@ -98,8 +117,8 @@ impl Proxy {
   }
 
   /// Метод установки типа прокси
-  pub fn with_proxy_type(mut self, proxy_type: ProxyType) -> Self {
-    self.proxy_type = proxy_type;
+  pub fn with_proxy_type(mut self, proxy_type: impl Into<ProxyType>) -> Self {
+    self.proxy_type = proxy_type.into();
     self
   }
 
@@ -202,54 +221,50 @@ impl Proxy {
 
 impl From<String> for Proxy {
   fn from(value: String) -> Self {
-    let split = value.split("://").collect::<Vec<&str>>();
-    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
+    if !validate_proxy_str(&value) {
+      return Self::new("127.0.0.1:1080", ProxyType::Socks5);
+    }
 
-    Self {
-      proxy_address: (*proxy).to_string(),
-      proxy_type: match *protocol {
-        #[cfg(feature = "http")]
-        "http" => ProxyType::Http,
-        #[cfg(feature = "socks5")]
-        "socks5" => ProxyType::Socks5,
-        #[cfg(feature = "socks4")]
-        "socks4" => ProxyType::Socks4,
-        #[cfg(feature = "socks5")]
-        _ => ProxyType::Socks5,
-        #[cfg(all(not(feature = "socks5"), feature = "socks4"))]
-        _ => ProxyType::Socks4,
-        #[cfg(all(not(feature = "socks5"), not(feature = "socks4"), feature = "http"))]
-        _ => ProxyType::Http,
-      },
-      timeout: 20000,
-      auth: None,
+    let proxy_split = value.split("://").collect::<Vec<&str>>();
+    let without_protocol = proxy_split[1].split("@").collect::<Vec<&str>>();
+
+    let (protocol, possible_auth, addr) = {
+      if without_protocol.len() == 2 {
+        (proxy_split[0], Some(without_protocol[0]), without_protocol[1])
+      } else {
+        (proxy_split[0], None, without_protocol[0])
+      }
+    };
+
+    if let Some(auth) = possible_auth {
+      Self::new_with_auth(addr, protocol, auth)
+    } else {
+      Self::new(addr, protocol)
     }
   }
 }
 
 impl From<&str> for Proxy {
   fn from(value: &str) -> Self {
-    let split = value.split("://").collect::<Vec<&str>>();
-    let (protocol, proxy) = (split.get(0).unwrap_or(&"socks5"), split.get(1).unwrap_or(&"127.0.0.1"));
+    if !validate_proxy_str(value) {
+      return Self::new("127.0.0.1:1080", ProxyType::Socks5);
+    }
 
-    Self {
-      proxy_address: (*proxy).to_string(),
-      proxy_type: match *protocol {
-        #[cfg(feature = "http")]
-        "http" => ProxyType::Http,
-        #[cfg(feature = "socks5")]
-        "socks5" => ProxyType::Socks5,
-        #[cfg(feature = "socks4")]
-        "socks4" => ProxyType::Socks4,
-        #[cfg(feature = "socks5")]
-        _ => ProxyType::Socks5,
-        #[cfg(all(not(feature = "socks5"), feature = "socks4"))]
-        _ => ProxyType::Socks4,
-        #[cfg(all(not(feature = "socks5"), not(feature = "socks4"), feature = "http"))]
-        _ => ProxyType::Http,
-      },
-      timeout: 20000,
-      auth: None,
+    let proxy_split = value.split("://").collect::<Vec<&str>>();
+    let without_protocol = proxy_split[1].split("@").collect::<Vec<&str>>();
+
+    let (protocol, possible_auth, addr) = {
+      if without_protocol.len() == 2 {
+        (proxy_split[0], Some(without_protocol[0]), without_protocol[1])
+      } else {
+        (proxy_split[0], None, without_protocol[0])
+      }
+    };
+
+    if let Some(auth) = possible_auth {
+      Self::new_with_auth(addr, protocol, auth)
+    } else {
+      Self::new(addr, protocol)
     }
   }
 }

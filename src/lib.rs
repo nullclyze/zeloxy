@@ -2,6 +2,7 @@ mod auth;
 mod error;
 mod result;
 mod rw;
+mod validate;
 
 #[cfg(any(feature = "http", feature = "socks4", feature = "socks5"))]
 mod connect;
@@ -21,6 +22,7 @@ pub mod tools;
 pub use auth::*;
 pub use error::*;
 pub use result::*;
+pub use validate::*;
 
 #[cfg(any(feature = "http", feature = "socks4", feature = "socks5"))]
 pub use proxy::*;
