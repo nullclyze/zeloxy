@@ -8,12 +8,12 @@ pub struct ProxyReader {
 
 impl ProxyReader {
   /// Метод чтения буффера из потока
-  pub async fn read(&mut self, buffer: impl Into<&mut [u8]>) -> std::io::Result<usize> {
-    self.read_stream.read_exact(buffer.into()).await
+  pub async fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+    self.read_stream.read_exact(buffer).await
   }
 
   /// Метод чтения буффера из потока до конца
-  pub async fn read_to_end(&mut self, buffer: impl Into<&mut Vec<u8>>) -> std::io::Result<usize> {
-    self.read_stream.read_to_end(buffer.into()).await
+  pub async fn read_to_end(&mut self, buffer: &mut Vec<u8>) -> std::io::Result<usize> {
+    self.read_stream.read_to_end(buffer).await
   }
 }

@@ -7,9 +7,9 @@ use crate::{ErrorKind, Proxy, ProxyError, ProxyResult};
 
 /// TCP-соединение с прокси
 pub struct ProxyStream {
+  pub reader: Mutex<Option<ProxyReader>>,
+  pub writer: Mutex<Option<ProxyWriter>>,
   proxy: Option<Proxy>,
-  reader: Mutex<Option<ProxyReader>>,
-  writer: Mutex<Option<ProxyWriter>>,
 }
 
 impl ProxyStream {
@@ -47,11 +47,11 @@ impl ProxyStream {
 
       *self.reader.lock().await = Some(ProxyReader { read_stream: rh });
       *self.writer.lock().await = Some(ProxyWriter { write_stream: wh });
-
-      Ok(())
     } else {
-      Err(ProxyError::new(ErrorKind::InvalidData, "proxy not set"))
+      return Err(ProxyError::new(ErrorKind::InvalidData, "proxy not set"));
     }
+
+    Ok(())
   }
 
   /// Метод выключения текущего TCP-соединения
@@ -67,7 +67,7 @@ impl ProxyStream {
   }
 
   /// Метод чтения данных из потока
-  pub async fn read(&self, buffer: impl Into<&mut [u8]>) -> ProxyResult<usize> {
+  pub async fn read(&self, buffer: &mut [u8]) -> ProxyResult<usize> {
     if let Some(reader) = self.reader.lock().await.as_mut() {
       Ok(reader.read(buffer).await?)
     } else {
@@ -76,7 +76,7 @@ impl ProxyStream {
   }
 
   /// Метод чтения данных из потока до конца
-  pub async fn read_to_end(&self, buffer: impl Into<&mut Vec<u8>>) -> ProxyResult<usize> {
+  pub async fn read_to_end(&self, buffer: &mut Vec<u8>) -> ProxyResult<usize> {
     if let Some(reader) = self.reader.lock().await.as_mut() {
       Ok(reader.read_to_end(buffer).await?)
     } else {
@@ -85,7 +85,7 @@ impl ProxyStream {
   }
 
   /// Метод записи данных в поток
-  pub async fn write(&self, buffer: impl Into<&[u8]>) -> ProxyResult<()> {
+  pub async fn write(&self, buffer: &[u8]) -> ProxyResult<()> {
     if let Some(writer) = self.writer.lock().await.as_mut() {
       Ok(writer.write(buffer).await?)
     } else {

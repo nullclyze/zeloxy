@@ -13,7 +13,7 @@ impl ProxyWriter {
   }
 
   /// Метод записи буффера в поток
-  pub async fn write(&mut self, buffer: impl Into<&[u8]>) -> std::io::Result<()> {
-    self.write_stream.write_all(buffer.into()).await
+  pub async fn write(&mut self, buffer: &[u8]) -> std::io::Result<()> {
+    self.write_stream.write_all(buffer).await
   }
 }
