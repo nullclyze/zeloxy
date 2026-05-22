@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use tokio::net::TcpStream;
-use tokio::time::timeout;
 
+use crate::connect::*;
+use crate::validate_proxy_str;
 use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
-use crate::{connect::*, validate_proxy_str};
 
 /// Структура прокси.
 ///
@@ -124,7 +124,7 @@ impl Proxy {
 
   /// Метод попытки создания соединения с прокси
   pub async fn is_available(&self) -> bool {
-    match timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
+    match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
       Ok(result) => match result {
         Ok(_) => return true,
         Err(_) => return false,
@@ -134,23 +134,19 @@ impl Proxy {
   }
 
   /// Метод получения IP прокси
-  pub fn get_ip(&self) -> Option<String> {
-    if let Some(ip) = self.proxy_address.split(":").collect::<Vec<&str>>().get(0) {
-      Some(ip.to_string())
-    } else {
-      None
-    }
+  pub fn get_ip(&self) -> String {
+    self.proxy_address.split(":").collect::<Vec<&str>>()[0].to_string()
   }
 
   /// Метод получения IP прокси
-  pub fn get_port(&self) -> Option<u16> {
-    if let Some(port_str) = self.proxy_address.split(":").collect::<Vec<&str>>().get(1) {
-      if let Ok(port) = (*port_str).parse::<u16>() {
-        return Some(port);
-      }
-    }
+  pub fn get_port(&self) -> u16 {
+    let port_str = self.proxy_address.split(":").collect::<Vec<&str>>()[1];
 
-    None
+    port_str.parse::<u16>().unwrap_or(match self.proxy_type {
+      ProxyType::Http => 80,
+      ProxyType::Socks4 => 4145,
+      ProxyType::Socks5 => 1080,
+    })
   }
 
   /// Метод получения адреса прокси в формате `IP:PORT`
@@ -174,7 +170,7 @@ impl Proxy {
 
   /// Метод подключения к прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
-    let mut stream = match timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
+    let mut stream = match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
       Ok(result) => match result {
         Ok(s) => s,
         Err(_) => return Err(ProxyError::new(ErrorKind::NotConnected, "could not connect to specified server")),
@@ -200,22 +196,17 @@ impl Proxy {
   }
 
   /// Метод подключения к прокси с ранее созданным TCP-соединением
-  pub async fn connect_with_stream(
-    &self,
-    mut stream: TcpStream,
-    target_host: impl Into<String>,
-    target_port: u16,
-  ) -> ProxyResult<TcpStream> {
+  pub async fn connect_with_stream(&self, stream: &mut TcpStream, target_host: impl Into<String>, target_port: u16) -> ProxyResult<()> {
     match self.proxy_type {
       #[cfg(feature = "http")]
-      ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyType::Http => connect_http(stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks5")]
-      ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyType::Socks5 => connect_socks5(stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks4")]
-      ProxyType::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyType::Socks4 => connect_socks4(stream, target_host.into(), target_port, &self.auth).await?,
     }
 
-    Ok(stream)
+    Ok(())
   }
 }
 

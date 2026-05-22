@@ -5,13 +5,14 @@ use zeloxy::{ProxyChain, ProxyResult};
 async fn test_mini_chain() -> ProxyResult<()> {
   let proxies = vec![
     "socks4://98.181.137.83:4145",
-    "socks4://98.170.57.249:4145",
     "socks5://212.58.132.5:1080",
+    "socks4://98.170.57.249:4145",
+    "socks4://184.178.172.14:4145",
   ];
 
-  let chain = ProxyChain::from(proxies);
+  let mut chain = ProxyChain::from(proxies);
 
-  let mut stream = chain.connect("ipinfo.io", 80).await?;
+  let mut stream = chain.connect("ipinfo.io", 80, true).await?;
 
   stream.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
 

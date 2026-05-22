@@ -11,10 +11,10 @@ async fn main() -> ProxyResult<()> {
   ];
 
   // Создаём цепочку прокси
-  let chain = ProxyChain::from(proxies);
+  let mut chain = ProxyChain::from(proxies);
 
   // Подключаемся к целевому серверу через цепочку
-  let mut stream = chain.connect("ipinfo.io", 80).await?;
+  let mut stream = chain.connect("ipinfo.io", 80, false).await?;
 
   // Отправляем GET-запрос
   stream.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;

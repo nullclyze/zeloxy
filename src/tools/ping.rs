@@ -50,7 +50,7 @@ fn default_pinged_services() -> Vec<(String, u16)> {
   ]
 }
 
-/// Функция пингования прокси
+/// Функция пингования прокси.
 /// Данная функция может требовать ~7 секунд на пингование прокси,
 /// используя сервисы по умолчанию, рекомендуется использовать
 /// `ping_proxy_parallel` для увеличения скорости пингования
@@ -133,24 +133,15 @@ pub async fn ping_proxy_chain(chain: &ProxyChain, pinged_services: Option<Vec<(S
     let mut from_to_pinged = 0;
 
     for proxy in &proxy_chain[1..] {
-      let proxy_ip = if let Some(ip) = proxy.get_ip() {
-        ip
-      } else {
-        continue;
-      };
-
-      let proxy_port = if let Some(port) = proxy.get_port() {
-        port
-      } else {
-        continue;
-      };
+      let proxy_ip = proxy.get_ip();
+      let proxy_port = proxy.get_port();
 
       let start_time = Instant::now();
 
-      stream = match proxy.connect_with_stream(stream, proxy_ip, proxy_port).await {
-        Ok(s) => s,
+      match proxy.connect_with_stream(&mut stream, proxy_ip, proxy_port).await {
+        Ok(_) => {}
         Err(_) => return ping_info, // Считается что цепочка поломана, поэтому кидаем что есть
-      };
+      }
 
       let from_to = (last_proxy_addr.to_string(), proxy.get_address().to_string());
       let ping = start_time.elapsed().as_millis() as u64;
@@ -169,9 +160,9 @@ pub async fn ping_proxy_chain(chain: &ProxyChain, pinged_services: Option<Vec<(S
 
     let start_time = Instant::now();
 
-    match last_proxy.connect_with_stream(stream, &service_host, service_port).await {
-      Ok(mut s) => {
-        let _ = s.shutdown().await;
+    match last_proxy.connect_with_stream(&mut stream, &service_host, service_port).await {
+      Ok(_) => {
+        let _ = stream.shutdown().await;
 
         let ping = start_time.elapsed().as_millis() as u64;
 
@@ -295,24 +286,15 @@ pub async fn ping_proxy_chain_parallel(chain: Arc<ProxyChain>, pinged_services: 
       let mut from_to_pinged = 0;
 
       for proxy in &proxy_chain[1..] {
-        let proxy_ip = if let Some(ip) = proxy.get_ip() {
-          ip
-        } else {
-          return;
-        };
-
-        let proxy_port = if let Some(port) = proxy.get_port() {
-          port
-        } else {
-          return;
-        };
+        let proxy_ip = proxy.get_ip();
+        let proxy_port = proxy.get_port();
 
         let start_time = Instant::now();
 
-        stream = match proxy.connect_with_stream(stream, proxy_ip, proxy_port).await {
-          Ok(s) => s,
+        match proxy.connect_with_stream(&mut stream, proxy_ip, proxy_port).await {
+          Ok(_) => {}
           Err(_) => return,
-        };
+        }
 
         let from_to = (last_proxy_addr.to_string(), proxy.get_address().to_string());
         let ping = start_time.elapsed().as_millis() as u64;
@@ -331,9 +313,9 @@ pub async fn ping_proxy_chain_parallel(chain: Arc<ProxyChain>, pinged_services: 
 
       let start_time = Instant::now();
 
-      match last_proxy.connect_with_stream(stream, &service_host, service_port).await {
-        Ok(mut s) => {
-          let _ = s.shutdown().await;
+      match last_proxy.connect_with_stream(&mut stream, &service_host, service_port).await {
+        Ok(_) => {
+          let _ = stream.shutdown().await;
 
           let ping = start_time.elapsed().as_millis();
 
