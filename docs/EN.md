@@ -4,7 +4,7 @@ Before we begin, we need to connect the `zeloxy` library by adding following dep
 
 ```toml
 [dependencies]
-zeloxy = { version = "0.2.2", features = ["all"] }
+zeloxy = { version = "0.3.0", features = ["all"] }
 ```
 
 Or type in terminal:
