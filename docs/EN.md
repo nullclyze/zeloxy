@@ -13,9 +13,9 @@ Or type in terminal:
 cargo add zeloxy
 ```
 
-# Library Features
+# Library features
 
-## Available Features
+## Available features
 
 - `http`: HTTP proxy support.
 - `socks4`: SOCKS4 proxy support.
@@ -25,7 +25,7 @@ cargo add zeloxy
 - `tools`: helper tools such as `ping` and `lookup`.
 - `all`: includes all features.
 
-## Default Features
+## Default features
 
 The default feature set includes: `http`, `socks4`, `socks5`
 
@@ -34,7 +34,7 @@ The default feature set includes: `http`, `socks4`, `socks5`
 Let's start by writing a simple program that will connect to `ipinfo.io:80` through a SOCKS4 proxy. This will allow us to accurately understand how third-party sites see our IP address when we use a proxy.
 
 ```rust
-use zeloxy::{GetRequestOpts, Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
@@ -81,7 +81,7 @@ via: 1.1 google
 }
 ```
 
-# Proxy Chain
+# Proxy chain
 
 The `zeloxy` library has built-in functionality for creating proxy chains.
 
@@ -115,10 +115,10 @@ async fn main() -> ProxyResult<()> {
   ];
 
   // Create a proxy chain
-  let chain = ProxyChain::from(proxies);
+  let mut chain = ProxyChain::from(proxies);
 
   // Connect to the target server via the chain
-  let mut stream = chain.connect("ipinfo.io", 80).await?;
+  let mut stream = chain.connect("ipinfo.io", 80, false).await?;
 
   // Send a GET request
   stream.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
