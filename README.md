@@ -26,7 +26,7 @@ Supported proxy types:
 - [ ] HTTPS proxy support
 - [x] Basic authorizations support
 - [x] Proxy chain implementation
-- [ ] Automatic proxies reordering in chain on error
+- [x] Automatic reordering of proxy chain on error
 - [x] Built-in proxy stream
 - [x] Proxy lookup
 - [x] Proxy ping
@@ -39,7 +39,7 @@ Current examples can be found here: [browse](https://github.com/nullclyze/zeloxy
 ## Create a HTTP proxy stream
 
 ```rust
-use zeloxy::{GetRequestOpts, Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
@@ -53,10 +53,13 @@ async fn main() -> ProxyResult<()> {
   stream.connect("example.com", 80).await?;
 
   // Отправляем GET-запрос на example.com
-  let resp = stream.get_request("example.com", GetRequestOpts::default()).await?;
+  let buf = "GET / HTTP/1.0\r\nHost: example.com\r\n\r\n".as_bytes();
+  stream.write(buf).await?;
 
-  // Логгируем ответ
-  println!("Ответ от example.com: {}", resp);
+  // Читаем ответ и логгируем его
+  let mut resp = Vec::new();
+  stream.read_to_end(&mut resp).await?;
+  println!("Ответ от example.com: {}", String::from_utf8_lossy(&resp));
 
   Ok(())
 }
@@ -100,10 +103,10 @@ async fn main() -> ProxyResult<()> {
   ];
 
   // Создаём цепочку прокси
-  let chain = ProxyChain::from(proxies);
+  let mut chain = ProxyChain::from(proxies);
 
   // Подключаемся к целевому серверу через цепочку
-  let mut stream = chain.connect("ipinfo.io", 80).await?;
+  let mut stream = chain.connect("ipinfo.io", 80, false).await?;
 
   // Отправляем GET-запрос
   stream.write_all(b"GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n").await?;
