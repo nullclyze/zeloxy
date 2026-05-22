@@ -1,9 +1,9 @@
 [package]
 name = "zeloxy"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 license = "MIT"
-description = "A library for creating lightweight, asynchronous, and lag-free proxy connections."
+description = "A library for creating lightweight, async, and lag-free proxy connections."
 repository = "https://github.com/nullclyze/zeloxy"
 documentation = "https://docs.rs/zeloxy"
 readme = "README.md"
