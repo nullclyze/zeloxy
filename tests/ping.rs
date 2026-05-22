@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use zeloxy::tools::{ping_proxy, ping_proxy_chain, ping_proxy_chain_parallel, ping_proxy_parallel};
-use zeloxy::{Proxy, ProxyChain, ProxyType};
+use zeloxy::{Proxy, ProxyChain, ProxyProtocol};
 
 #[tokio::test]
 async fn test_ping_proxy() {
-  let proxy = Proxy::new("98.175.31.222:4145", ProxyType::Socks5);
+  let proxy = Proxy::new("98.175.31.222:4145", ProxyProtocol::Socks5);
 
   let result = ping_proxy(&proxy, None).await;
 
@@ -22,7 +22,7 @@ async fn test_ping_proxy() {
 
 #[tokio::test]
 async fn test_ping_proxy_parallel() {
-  let proxy = Proxy::new("98.175.31.222:4145", ProxyType::Socks5);
+  let proxy = Proxy::new("98.175.31.222:4145", ProxyProtocol::Socks5);
 
   let result = ping_proxy_parallel(Arc::new(proxy), None).await;
 

@@ -1,7 +1,7 @@
 use std::io::{Error, ErrorKind};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use zeloxy::{Proxy, ProxyResult, ProxyType};
+use zeloxy::{Proxy, ProxyProtocol, ProxyResult};
 
 #[test]
 fn test_proxy_from() {
@@ -18,7 +18,7 @@ fn test_proxy_from() {
 
 #[tokio::test]
 async fn test_http_proxy() -> std::io::Result<()> {
-  let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+  let proxy = Proxy::new("91.132.92.231:80", ProxyProtocol::Http);
 
   let mut conn = match proxy.connect("ipinfo.io", 80).await {
     ProxyResult::Ok(s) => s,
@@ -37,7 +37,7 @@ async fn test_http_proxy() -> std::io::Result<()> {
 
 #[tokio::test]
 async fn test_socks5_proxy() -> std::io::Result<()> {
-  let proxy = Proxy::new("212.58.132.5:1080", ProxyType::Socks5);
+  let proxy = Proxy::new("212.58.132.5:1080", ProxyProtocol::Socks5);
 
   let mut conn = match proxy.connect("ipinfo.io", 80).await {
     ProxyResult::Ok(s) => s,
@@ -56,7 +56,7 @@ async fn test_socks5_proxy() -> std::io::Result<()> {
 
 #[tokio::test]
 async fn test_socks4_proxy() -> std::io::Result<()> {
-  let proxy = Proxy::new("68.71.242.118:4145", ProxyType::Socks4);
+  let proxy = Proxy::new("68.71.242.118:4145", ProxyProtocol::Socks4);
 
   let mut conn = match proxy.connect("ipinfo.io", 80).await {
     ProxyResult::Ok(s) => s,

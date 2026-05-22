@@ -1,10 +1,10 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use zeloxy::{Proxy, ProxyResult, ProxyType};
+use zeloxy::{Proxy, ProxyProtocol, ProxyResult};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
   // Создаём HTTP-прокси
-  let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+  let proxy = Proxy::new("91.132.92.231:80", ProxyProtocol::Http);
 
   match proxy.connect("ipinfo.io", 80).await {
     ProxyResult::Ok(mut conn) => {

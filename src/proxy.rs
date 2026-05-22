@@ -18,12 +18,12 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 ///
 /// ```rust, ignore
 /// use tokio::io::{AsyncReadExt, AsyncWriteExt};
-/// use zeloxy::{Proxy, ProxyResult, ProxyType};
+/// use zeloxy::{Proxy, ProxyResult, ProxyProtocol};
 ///
 /// #[tokio::main]
 /// async fn main() -> std::io::Result<()> {
 ///   // Создаём HTTP-прокси и задаём адрес целевого сервера
-///   let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+///   let proxy = Proxy::new("91.132.92.231:80", ProxyProtocol::Http);
 ///
 ///   match proxy.connect("example.com", 80).await {
 ///     ProxyResult::Ok(mut conn) => {
@@ -47,15 +47,15 @@ use crate::{ErrorKind, ProxyAuth, ProxyError, ProxyResult};
 /// Больше актуальных примеров: [смотреть](https://github.com/nullclyze/zeloxy/tree/main/examples)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Proxy {
-  proxy_type: ProxyType,
-  proxy_address: String,
+  address: String,
+  protocol: ProxyProtocol,
   timeout: u64,
   auth: Option<ProxyAuth>,
 }
 
-/// Тип прокси
+/// Протокол прокси
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ProxyType {
+pub enum ProxyProtocol {
   #[cfg(feature = "http")]
   Http,
 
@@ -66,7 +66,7 @@ pub enum ProxyType {
   Socks5,
 }
 
-impl From<&str> for ProxyType {
+impl From<&str> for ProxyProtocol {
   fn from(value: &str) -> Self {
     match value {
       "http" => Self::Http,
@@ -77,7 +77,7 @@ impl From<&str> for ProxyType {
   }
 }
 
-impl From<String> for ProxyType {
+impl From<String> for ProxyProtocol {
   fn from(value: String) -> Self {
     Self::from(value.as_str())
   }
@@ -85,20 +85,20 @@ impl From<String> for ProxyType {
 
 impl Proxy {
   /// Метод создания нового прокси
-  pub fn new(proxy_address: impl Into<String>, proxy_type: impl Into<ProxyType>) -> Self {
+  pub fn new(addr: impl Into<String>, protocol: impl Into<ProxyProtocol>) -> Self {
     Self {
-      proxy_address: proxy_address.into(),
-      proxy_type: proxy_type.into(),
+      address: addr.into(),
+      protocol: protocol.into(),
       timeout: 20000,
       auth: None,
     }
   }
 
   /// Метод создания нового прокси с авторизацией
-  pub fn new_with_auth(proxy_address: impl Into<String>, proxy_type: impl Into<ProxyType>, auth: impl Into<ProxyAuth>) -> Self {
+  pub fn new_with_auth(addr: impl Into<String>, protocol: impl Into<ProxyProtocol>, auth: impl Into<ProxyAuth>) -> Self {
     Self {
-      proxy_address: proxy_address.into(),
-      proxy_type: proxy_type.into(),
+      address: addr.into(),
+      protocol: protocol.into(),
       timeout: 20000,
       auth: Some(auth.into()),
     }
@@ -116,15 +116,15 @@ impl Proxy {
     self
   }
 
-  /// Метод установки типа прокси
-  pub fn with_proxy_type(mut self, proxy_type: impl Into<ProxyType>) -> Self {
-    self.proxy_type = proxy_type.into();
+  /// Метод установки протокола прокси
+  pub fn with_protocol(mut self, protocol: impl Into<ProxyProtocol>) -> Self {
+    self.protocol = protocol.into();
     self
   }
 
   /// Метод попытки создания соединения с прокси
   pub async fn is_available(&self) -> bool {
-    match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
+    match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.address)).await {
       Ok(result) => match result {
         Ok(_) => return true,
         Err(_) => return false,
@@ -133,44 +133,49 @@ impl Proxy {
     }
   }
 
+  /// Метод получения протокола прокси
+  pub fn get_protocol(&self) -> &ProxyProtocol {
+    &self.protocol
+  }
+
   /// Метод получения IP прокси
   pub fn get_ip(&self) -> String {
-    self.proxy_address.split(":").collect::<Vec<&str>>()[0].to_string()
+    self.address.split(":").collect::<Vec<&str>>()[0].to_string()
   }
 
   /// Метод получения IP прокси
   pub fn get_port(&self) -> u16 {
-    let port_str = self.proxy_address.split(":").collect::<Vec<&str>>()[1];
+    let port_str = self.address.split(":").collect::<Vec<&str>>()[1];
 
-    port_str.parse::<u16>().unwrap_or(match self.proxy_type {
-      ProxyType::Http => 80,
-      ProxyType::Socks4 => 4145,
-      ProxyType::Socks5 => 1080,
+    port_str.parse::<u16>().unwrap_or(match self.protocol {
+      ProxyProtocol::Http => 80,
+      ProxyProtocol::Socks4 => 4145,
+      ProxyProtocol::Socks5 => 1080,
     })
   }
 
   /// Метод получения адреса прокси в формате `IP:PORT`
   pub fn get_address(&self) -> &str {
-    &self.proxy_address
+    &self.address
   }
 
   /// Метод получения полного адреса прокси в формате `PROTOCOL://IP:PORT`
   pub fn get_full_address(&self) -> String {
-    let protocol = match self.proxy_type {
+    let protocol = match self.protocol {
       #[cfg(feature = "http")]
-      ProxyType::Http => "http",
+      ProxyProtocol::Http => "http",
       #[cfg(feature = "socks4")]
-      ProxyType::Socks4 => "socks4",
+      ProxyProtocol::Socks4 => "socks4",
       #[cfg(feature = "socks5")]
-      ProxyType::Socks5 => "socks5",
+      ProxyProtocol::Socks5 => "socks5",
     };
 
-    format!("{}://{}", protocol, self.proxy_address)
+    format!("{}://{}", protocol, self.address)
   }
 
   /// Метод подключения к прокси
   pub async fn connect(&self, target_host: impl Into<String>, target_port: u16) -> ProxyResult<TcpStream> {
-    let mut stream = match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.proxy_address)).await {
+    let mut stream = match tokio::time::timeout(Duration::from_millis(self.timeout), TcpStream::connect(&self.address)).await {
       Ok(result) => match result {
         Ok(s) => s,
         Err(_) => return Err(ProxyError::new(ErrorKind::NotConnected, "could not connect to specified server")),
@@ -183,13 +188,13 @@ impl Proxy {
       }
     };
 
-    match self.proxy_type {
+    match self.protocol {
       #[cfg(feature = "http")]
-      ProxyType::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Http => connect_http(&mut stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks5")]
-      ProxyType::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Socks5 => connect_socks5(&mut stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks4")]
-      ProxyType::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Socks4 => connect_socks4(&mut stream, target_host.into(), target_port, &self.auth).await?,
     }
 
     Ok(stream)
@@ -197,13 +202,13 @@ impl Proxy {
 
   /// Метод подключения к прокси с ранее созданным TCP-соединением
   pub async fn connect_with_stream(&self, stream: &mut TcpStream, target_host: impl Into<String>, target_port: u16) -> ProxyResult<()> {
-    match self.proxy_type {
+    match self.protocol {
       #[cfg(feature = "http")]
-      ProxyType::Http => connect_http(stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Http => connect_http(stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks5")]
-      ProxyType::Socks5 => connect_socks5(stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Socks5 => connect_socks5(stream, target_host.into(), target_port, &self.auth).await?,
       #[cfg(feature = "socks4")]
-      ProxyType::Socks4 => connect_socks4(stream, target_host.into(), target_port, &self.auth).await?,
+      ProxyProtocol::Socks4 => connect_socks4(stream, target_host.into(), target_port, &self.auth).await?,
     }
 
     Ok(())
@@ -213,7 +218,7 @@ impl Proxy {
 impl From<String> for Proxy {
   fn from(value: String) -> Self {
     if !validate_proxy_str(&value) {
-      return Self::new("127.0.0.1:1080", ProxyType::Socks5);
+      return Self::new("127.0.0.1:1080", ProxyProtocol::Socks5);
     }
 
     let proxy_split = value.split("://").collect::<Vec<&str>>();
@@ -238,7 +243,7 @@ impl From<String> for Proxy {
 impl From<&str> for Proxy {
   fn from(value: &str) -> Self {
     if !validate_proxy_str(value) {
-      return Self::new("127.0.0.1:1080", ProxyType::Socks5);
+      return Self::new("127.0.0.1:1080", ProxyProtocol::Socks5);
     }
 
     let proxy_split = value.split("://").collect::<Vec<&str>>();

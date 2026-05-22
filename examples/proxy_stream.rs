@@ -1,9 +1,9 @@
-use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyProtocol, ProxyResult, ProxyStream};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
   // Создаём HTTP-прокси
-  let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+  let proxy = Proxy::new("91.132.92.231:80", ProxyProtocol::Http);
 
   // Создаём поток с прокси
   let stream = ProxyStream::new(proxy);
