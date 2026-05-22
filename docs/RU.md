@@ -34,7 +34,7 @@ cargo add zeloxy
 Давай для начала напишем простую программу, которая будет подключаться к `ipinfo.io:80` через SOCKS4 прокси. Здесь мы сможем точно понять, каким видят наш IP сторонние сайты, когда мы используем прокси.
 
 ```rust
-use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {

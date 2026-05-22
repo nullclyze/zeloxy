@@ -39,12 +39,12 @@ Current examples can be found here: [browse](https://github.com/nullclyze/zeloxy
 ## Create a HTTP proxy stream
 
 ```rust
-use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyProtocol};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
   // Создаём HTTP-прокси (в данном примере используется публичный прокси)
-  let proxy = Proxy::new("91.132.92.231:80", ProxyType::Http);
+  let proxy = Proxy::new("91.132.92.231:80", ProxyProtocol::Http);
 
   // Создаём поток с прокси
   let stream = ProxyStream::new(proxy);

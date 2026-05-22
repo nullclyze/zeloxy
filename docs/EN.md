@@ -34,7 +34,7 @@ The default feature set includes: `http`, `socks4`, `socks5`
 Let's start by writing a simple program that will connect to `ipinfo.io:80` through a SOCKS4 proxy. This will allow us to accurately understand how third-party sites see our IP address when we use a proxy.
 
 ```rust
-use zeloxy::{Proxy, ProxyResult, ProxyStream, ProxyType};
+use zeloxy::{Proxy, ProxyResult, ProxyStream};
 
 #[tokio::main]
 async fn main() -> ProxyResult<()> {
