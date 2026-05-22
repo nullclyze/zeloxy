@@ -99,3 +99,15 @@ impl From<TcpStream> for ProxyStream {
     Self::new_with_stream(value)
   }
 }
+
+impl From<String> for ProxyStream {
+  fn from(value: String) -> Self {
+    Self::new(value)
+  }
+}
+
+impl From<&str> for ProxyStream {
+  fn from(value: &str) -> Self {
+    Self::new(value)
+  }
+}
