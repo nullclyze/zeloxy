@@ -41,17 +41,17 @@ async fn main() -> ProxyResult<()> {
   // Create a SOCKS4 proxy
   let proxy = Proxy::from("socks4://68.71.242.118:4145");
 
-  // Create a stream with the proxy
+  // Create a proxy stream
   let stream = ProxyStream::new(proxy);
 
-  // Connect to the target server
-  stream.connect("ipinfo.io", 80).await?;
-
   // Send a GET request to ipinfo.io
-  let resp = stream.get_request("ipinfo.io", GetRequestOpts::default()).await?;
+  let buf = "GET / HTTP/1.0\r\nHost: ipinfo.io\r\n\r\n".as_bytes();
+  stream.write(buf).await?;
 
-  // Log the response
-  println!("Response: {}", resp);
+  // Read response and log it
+  let mut resp = Vec::new();
+  stream.read_to_end(&mut resp).await?;
+  println!("Response: {}", String::from_utf8_lossy(&resp));
 
   Ok(())
 }
