@@ -4,7 +4,7 @@
 
 A Rust library for working with various proxies.
 
-Supported proxy types:
+Supported proxy protocols:
 
 - **HTTP** (without auth / with basic auth)
 - **SOCKS5** (without auth / with `user / pass` auth)
@@ -31,6 +31,17 @@ Supported proxy types:
 - [x] Proxy lookup
 - [x] Proxy ping
 - [ ] Proxy stealth check
+
+# Include dependency
+
+In `Cargo.toml`:
+
+```toml
+[dependencies]
+zeloxy = { version = "0.3.0", features = ["all"] }
+```
+
+Information about available features: [read](https://github.com/nullclyze/zeloxy/blob/main/docs/EN.md#library-features)
 
 # Examples
 
